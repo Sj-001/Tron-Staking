@@ -1,9 +1,10 @@
 // 0.5.1-c8a2
 // Enable optimization
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.0;
 
 import "./ERC20.sol";
-import "./ERC20Detailed.sol";
 
 /**
  * @title SimpleToken
@@ -11,12 +12,12 @@ import "./ERC20Detailed.sol";
  * Note they can later distribute these tokens as they wish using `transfer` and other
  * `ERC20` functions.
  */
-contract Token is ERC20, ERC20Detailed {
+contract LivToken is ERC20{
 
     /**
      * @dev Constructor that gives msg.sender all of existing tokens.
      */
-    constructor () public ERC20Detailed("LivConect", "LIV", 8) {
+    constructor () ERC20("LivConect", "LIV") {
         _mint(msg.sender, 20000000 * (10 ** uint256(decimals())));
     }
 }

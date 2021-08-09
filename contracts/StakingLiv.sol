@@ -1,12 +1,13 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 import "./LivToken.sol";
+import "./Referral.sol";
 // import "./DaiToken.sol";
 
-contract Staking {
+contract Staking is Referral{
 
   LivToken public livToken;
-  address public owner;
 
   address[] public stakers;
   mapping(address => uint) public stakingBalance;
@@ -14,12 +15,12 @@ contract Staking {
   mapping(address => bool) public isStaking;
   mapping(address => uint) public rewards;
 
-  constructor(LivToken _livToken) public {
+  constructor(LivToken _livToken) Referral(){
      livToken = _livToken;
      owner = msg.sender;
   }
 
-  function stakeTokens(uint _amount) public{
+  function stakeTokens(uint _amount, address _parent) public{
 
     require(_amount > 0, "amount cannot be 0");
     livToken.transferFrom(msg.sender, address(this), _amount);
@@ -29,7 +30,8 @@ contract Staking {
     if(!hasStaked[msg.sender]) {
       stakers.push(msg.sender);
     }
-
+    addUser(_parent);
+    distributeDepositCommissions(_amount, msg.sender);
     isStaking[msg.sender] = true;
     hasStaked[msg.sender] = true;
   }
@@ -39,25 +41,15 @@ contract Staking {
         view
         returns(uint)
     {
-        return stakes[_stakeholder];
+        return stakingBalance[_stakeholder];
     }
 
-  function calculateReward(uint apy, address stakeHolder){
-    rewards[stakeHolder] = stakingBalance[stakeHolder]*apy/100;
+  function calculateReward(uint apy, address stakeHolder) public {
+    rewards[stakeHolder] += stakingBalance[stakeHolder]*apy/uint(100);
+    distributeInterestCommissions(rewards[stakeHolder], stakeHolder);
   }
 
-  function distributeRewards() 
-        public
-        
-    {
-        require(msg.sender == owner);
-        for (uint s = 0; s < stakers.length; s += 1){
-            address stakeholder = stakers[s];
-            uint reward = calculateReward(stakeholder);
-            rewards[stakeholder] = rewards[stakeholder].add(reward);
-        }
-    }
-
+  
     function rewardOf(address _stakeholder) 
         public
         view
@@ -69,9 +61,10 @@ contract Staking {
     function withdrawReward() 
         public
     {
-        uint reward = rewards[msg.sender];
+        uint reward = rewards[msg.sender] + commissions[msg.sender];
         rewards[msg.sender] = 0;
-        livToken._mint(msg.sender, reward);
+        commissions[msg.sender] = 0;
+        livToken.transfer(msg.sender, reward);
     }
 
   function unstakeTokens() public {
@@ -79,7 +72,7 @@ contract Staking {
     require(balance > 0, "balance cannot be 0");
 
     livToken.transfer(msg.sender, balance);
-
+    removeUser(msg.sender);
     stakingBalance[msg.sender] = 0;
     isStaking[msg.sender] = false;
   }
